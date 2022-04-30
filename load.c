@@ -32,7 +32,7 @@ static void handle_event(struct mg_connection *c, int ev, void *ev_data, void *f
     
     size_t request_size = mg_http_get_request_len(hm->message.ptr, hm->message.len);
     
-    char *data = hm->message.ptr + request_size;
+    const char *data = hm->message.ptr + request_size;
     size_t size = hm->message.len - request_size;
     
     state->data = calloc(size + 1, 1);

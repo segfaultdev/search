@@ -1,6 +1,7 @@
 #include <search.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 #include <duck.h>
 #include <html.h>
 #include <load.h>

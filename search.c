@@ -9,7 +9,7 @@
 #include <duck.h>
 #include <load.h>
 
-const char *listen_url = "http://0.0.0.0:8000";
+const char *listen_url = "http://0.0.0.0:80";
 
 const char *entry_format = \
   "<tr>" \
