@@ -19,7 +19,7 @@ entry_t *duck_search(const char *raw_query) {
   html_parse_stream(state, buffer, buffer, size);
   doc = html_parse_end(state);
   
-  html_print_dom(doc);
+  // html_print_dom(doc);
   
   HtmlElement *element = doc->root_element->child->child->sibling->child->sibling->sibling->sibling->sibling->sibling->sibling->sibling->sibling->child;
   
