@@ -48,9 +48,6 @@ static void handle_event(struct mg_connection *c, int ev, void *ev_data, void *f
 }
 
 char *load_url(const char *url, size_t *size) {
-  // TODO: fix good code and remove system()
-  
-  /*
   struct mg_mgr mgr;
   mg_mgr_init(&mgr);
   
@@ -70,8 +67,8 @@ char *load_url(const char *url, size_t *size) {
   
   if (size) *size = state.size;
   return state.data;
-  */
   
+  /*
   char buffer[320];
   sprintf(buffer, "wget -U \"Mozilla/5.0 (X11; Linux x86_64; rv:98.0) Gecko/20100101 Firefox/98.0\" %s -O temp.txt -4 --no-check-certificate 2> /dev/null", url);
   
@@ -93,4 +90,5 @@ char *load_url(const char *url, size_t *size) {
   
   if (size) *size = new_size;
   return data;
+  */
 }

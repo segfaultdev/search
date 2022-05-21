@@ -7,7 +7,7 @@
 #include <load.h>
 
 entry_t *duck_search(const char *raw_query) {
-  char url[100 + strlen(raw_query)];
+  char url[256 + strlen(raw_query)];
   sprintf(url, "https://lite.duckduckgo.com/lite?q=%s", raw_query);
   
   size_t size;
@@ -44,7 +44,24 @@ entry_t *duck_search(const char *raw_query) {
     
     while (attrib) {
       if (attrib->key == HTML_ATTRIB_HREF) {
-        strcpy(entry.url, attrib->value);
+        const char *ptr = strstr(attrib->value, "?uddg=") + 6;
+        
+        while (ptr && *ptr && *ptr != '&') {
+          char temp[2] = {*ptr, '\0'};
+          
+          if (*ptr == '%') {
+            ptr++;
+            
+            char hex_temp[3] = {ptr[0], ptr[1], '\0'};
+            ptr++;
+            
+            temp[0] = strtol(hex_temp, NULL, 16);
+          }
+          
+          strcat(entry.url, temp);
+          ptr++;
+        }
+        
         break;
       }
       

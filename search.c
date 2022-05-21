@@ -9,26 +9,14 @@
 #include <duck.h>
 #include <load.h>
 
-const char *listen_url = "http://0.0.0.0:80";
+const char *listen_url = "https://0.0.0.0:443";
 
 const char *entry_format = \
   "<tr>" \
   "  <td class=\"row-url\"><a class=\"span-row-url\" href=\"%s\">%s</a></td>" \
   "</tr>" \
   "<tr>" \
-  "  <td class=\"row-title\"><a class=\"span-row-title\" href=\"%s\">%s</a></td>" \
-  "</tr>" \
-  "<tr>" \
-  "  <td class=\"row-data\"><span class=\"span-row-data\">%s</span></td>" \
-  "</tr>" \
-;
-
-const char *entry_format_pdf = \
-  "<tr>" \
-  "  <td class=\"row-url\"><a class=\"span-row-url\" href=\"%s\">%s</a></td>" \
-  "</tr>" \
-  "<tr>" \
-  "  <td class=\"row-title\">[PDF] <a class=\"span-row-title\" href=\"%s\">%s</a></td>" \
+  "  <td class=\"row-title\">%s<a class=\"span-row-title\" href=\"%s\">%s</a></td>" \
   "</tr>" \
   "<tr>" \
   "  <td class=\"row-data\"><span class=\"span-row-data\">%s</span></td>" \
@@ -43,29 +31,41 @@ static void handle_exit(int signo) {
 }
 
 static void handle_event(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
-  if (ev == MG_EV_HTTP_MSG) {
+  if (ev == MG_EV_ACCEPT) {
+    struct mg_tls_opts opts = {
+      .cert = "/etc/letsencrypt/live/segsy.dev/fullchain.pem",
+      .certkey = "/etc/letsencrypt/live/segsy.dev/privkey.pem",
+    };
+    
+    mg_tls_init(c, &opts);
+  } else if (ev == MG_EV_HTTP_MSG) {
     struct mg_http_message *hm = ev_data;
     
     struct mg_http_serve_opts opts = (struct mg_http_serve_opts){
       .root_dir = "public",
-      .ssi_pattern = "#.html"
+      .ssi_pattern = "#.shtml",
+      .extra_headers = "Cross-Origin-Opener-Policy: same-origin\r\nCross-Origin-Embedder-Policy: require-corp\r\n",
+      .mime_types = "html=text/html,js=text/javascript,png=image/png,wasm=application/wasm"
     };
     
     printf("path: '%.*s'\n", hm->uri.len, hm->uri.ptr);
     
+    int query_len = hm->query.len;
+    if (query_len > 256) query_len = 256;
+    
     const char *find = "query=";
-    char *ptr = memmem(hm->query.ptr, hm->query.len, find, strlen(find));
+    char *ptr = memmem(hm->query.ptr, query_len, find, strlen(find));
     
     if (ptr) {
       int index = (ptr - hm->query.ptr) + strlen(find);
       
-      char query[(hm->query.len - index) + 1];
+      char query[(query_len - index) + 1];
       int length = 0;
       
-      char raw_query[hm->query.len + 1];
+      char raw_query[query_len + 1];
       int raw_length = 0;
       
-      while (hm->query.len - index) {
+      while (query_len - index) {
         if (hm->query.ptr[index] == '&') {
           break;
         }
@@ -81,7 +81,7 @@ static void handle_event(struct mg_connection *c, int ev, void *ev_data, void *f
           int value = 0;
           
           index++;
-          if (!(hm->query.len - index)) continue;
+          if (!(query_len - index)) continue;
           
           char *hex_ptr = strchr(hex_str, toupper(hm->query.ptr[index]));
           
@@ -89,7 +89,7 @@ static void handle_event(struct mg_connection *c, int ev, void *ev_data, void *f
           value += (hex_ptr - hex_str) * 16;
           
           index++;
-          if (!(hm->query.len - index)) continue;
+          if (!(query_len - index)) continue;
           
           hex_ptr = strchr(hex_str, toupper(hm->query.ptr[index]));
           
@@ -115,10 +115,25 @@ static void handle_event(struct mg_connection *c, int ev, void *ev_data, void *f
         int length = 0;
         
         for (int i = 0; entries[i].url[0]; i++) {
-          // printf("-> '%s'\n", entries[i].title);
-          
           char sub_buffer[strlen(entry_format) + strlen(entries[i].title) + strlen(entries[i].url) * 3 + strlen(entries[i].data) + 1];
-          sprintf(sub_buffer, entries[i].is_pdf ? entry_format_pdf : entry_format, entries[i].url, entries[i].url, entries[i].url, entries[i].title, entries[i].data);
+          
+          char append[64] = {0};
+          
+          if (entries[i].is_pdf) {
+            strcat(append, "[PDF] ");
+          }
+          
+          if (strstr(entries[i].url, "google.") ||
+              strstr(entries[i].url, "goo.gl/") ||
+              strstr(entries[i].url, "youtube.") ||
+              strstr(entries[i].url, "facebook.") ||
+              strstr(entries[i].url, "instagram.") ||
+              strstr(entries[i].url, "twitter.") ||
+              strstr(entries[i].url, "t.co/")) {
+            strcat(append, "[unsafe] ");
+          }
+          
+          sprintf(sub_buffer, entry_format, entries[i].url, entries[i].url, append, entries[i].url, entries[i].title, entries[i].data);
           
           buffer = realloc(buffer, length + strlen(sub_buffer) + 1);
           strcat(buffer, sub_buffer);
